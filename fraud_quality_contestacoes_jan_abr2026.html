@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fraud Quality · Contestações Procedentes</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+:root { color-scheme: light; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#f2f2f7; color:#1c1c1e; }
+
+.header { background:#7B00F5; color:white; padding:20px 28px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.h-team { font-size:11px; opacity:.75; text-transform:uppercase; letter-spacing:.5px; }
+.h-title { font-size:22px; font-weight:700; margin:3px 0; }
+.h-sub { font-size:12px; opacity:.7; }
+
+.toolbar { background:white; border-bottom:1px solid #e5e5ea; padding:12px 28px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.filter-grp { display:flex; align-items:center; gap:6px; }
+.filter-grp label { font-size:12px; color:#8e8e93; font-weight:500; }
+.filter-grp select { border:1px solid #d1d1d6; border-radius:8px; padding:6px 10px; font-size:13px; background:#fafafa; color:#1c1c1e; cursor:pointer; }
+.badge-updated { font-size:11px; color:#8e8e93; }
+
+.content { padding:24px 28px; max-width:1440px; margin:0 auto; }
+
+/* KPIs */
+.kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:20px; }
+.kpi { background:white; border-radius:14px; padding:20px; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+.kpi.main { background:#7B00F5; color:white; }
+.kpi-n { font-size:44px; font-weight:700; line-height:1; color:#7B00F5; }
+.kpi.main .kpi-n { color:white; }
+.kpi-l { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:#8e8e93; margin-top:6px; }
+.kpi.main .kpi-l { color:rgba(255,255,255,.7); }
+.kpi-s { font-size:12px; color:#aeaeb2; margin-top:2px; }
+.kpi.main .kpi-s { color:rgba(255,255,255,.55); }
+
+/* Charts */
+.charts-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:24px; }
+@media(max-width:680px){ .charts-row{ grid-template-columns:1fr; } }
+.chart-card { background:white; border-radius:14px; padding:20px; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+.chart-ttl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#7B00F5; margin-bottom:14px; }
+.chart-wrap { position:relative; height:210px; }
+
+/* Sections */
+.dist-section { margin-bottom:20px; }
+.dist-hdr { background:#7B00F5; color:white; border-radius:14px 14px 0 0; padding:16px 22px; display:flex; align-items:center; justify-content:space-between; }
+.dist-hdr h2 { font-size:18px; font-weight:700; }
+.dist-hdr span { font-size:13px; opacity:.7; }
+.dist-hdr p { font-size:11px; opacity:.65; margin-top:2px; }
+.dist-body { background:white; border-radius:0 0 14px 14px; padding:20px; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+
+.dist-stats { display:flex; gap:28px; margin-bottom:20px; flex-wrap:wrap; }
+.ds { text-align:center; }
+.ds-n { font-size:32px; font-weight:700; line-height:1; }
+.ds-n.has { color:#7B00F5; }
+.ds-n.zero { color:#d1d1d6; }
+.ds-l { font-size:11px; color:#8e8e93; margin-top:3px; }
+
+/* Case cards */
+.case-card { border:1px solid #e5e5ea; border-radius:12px; margin-bottom:10px; overflow:hidden; }
+.case-hdr { padding:13px 16px; background:#fafafa; display:flex; align-items:flex-start; justify-content:space-between; cursor:pointer; gap:10px; }
+.case-hdr:hover { background:#f2f2f7; }
+.ch-left { flex:1; }
+.badges { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+.badge { font-size:10px; font-weight:700; text-transform:uppercase; padding:2px 9px; border-radius:20px; letter-spacing:.3px; }
+.b-mes  { background:#ede9fe; color:#6d28d9; }
+.b-src  { background:#f0fdf4; color:#16a34a; }
+.b-cont { background:#fff7ed; color:#c2410c; }
+.case-action { font-size:13px; font-weight:600; color:#1c1c1e; line-height:1.4; }
+.ch-right { display:flex; align-items:center; gap:5px; flex-shrink:0; padding-top:2px; }
+.case-id { font-size:10px; color:#c7c7cc; font-family:monospace; }
+.chev { font-size:18px; color:#7B00F5; transition:transform .2s; line-height:1; }
+.case-card.open .chev { transform:rotate(180deg); }
+
+.case-body { display:none; padding:18px; border-top:1px solid #f0f0f5; }
+.case-card.open .case-body { display:block; }
+.fgrid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+@media(max-width:560px){ .fgrid{ grid-template-columns:1fr; } }
+.fg { margin-bottom:12px; }
+.fl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:#8e8e93; margin-bottom:3px; }
+.fv { font-size:13px; color:#1c1c1e; line-height:1.55; }
+.fv.accent { color:#7B00F5; font-weight:600; }
+.mat-tag { display:inline-block; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:5px 12px; font-size:12px; color:#6d28d9; margin-top:4px; line-height:1.5; }
+.analista-row { margin-top:12px; padding-top:12px; border-top:1px solid #f0f0f5; font-size:11px; color:#aeaeb2; }
+
+.empty { text-align:center; padding:50px; color:#aeaeb2; font-size:14px; }
+.footer { text-align:center; padding:20px; font-size:11px; color:#aeaeb2; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="h-team">Fraud Quality Team</div>
+    <div class="h-title">Contestações Procedentes</div>
+    <div class="h-sub" id="hdr-period">Janeiro – Março 2026 · Todos os Distritos</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;">
+    <span style="font-size:11px;opacity:.5;">Confidencial</span>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="filter-grp">
+    <label>Distrito</label>
+    <select id="sel-dist" onchange="applyFilter()">
+      <option value="">Todos os Distritos</option>
+      <option value="Gamers">Gamers</option>
+      <option value="Identity Fraud">Identity Fraud</option>
+      <option value="Mule Account">Mule Account</option>
+    </select>
+  </div>
+  <div class="filter-grp">
+    <label>De</label>
+    <input type="date" id="dt-ini" value="2026-01-01" onchange="applyFilter()">
+  </div>
+  <div class="filter-grp">
+    <label>Até</label>
+    <input type="date" id="dt-fim" value="2026-04-30" onchange="applyFilter()">
+  </div>
+  <div class="filter-grp">
+    <label>Fonte</label>
+    <select id="sel-fonte" onchange="applyFilter()">
+      <option value="">Todas as fontes</option>
+      <option value="Catch & Release">Catch &amp; Release</option>
+      <option value="Regulatory">Regulatory</option>
+      <option value="Reputational">Reputational</option>
+      <option value="Csat">Csat</option>
+      <option value="Reversals">Reversals</option>
+    </select>
+  </div>
+</div>
+
+<div class="content" id="content"></div>
+<div class="footer">Fonte: etl.br__series_contract.fraud_invops_quality · Scorecard: Apontamentos Externos</div>
+
+<script>
+let LIVE_CASES = [{"id":"289f9b7d-bf8c-4956-961b-f31f7d51eafb","distrito":"Mule Account","mes":2,"semana":9,"fonte":"Catch & Release","cont":"[Procedente] Divergência na interpretação do qualiter","analista":"anapaula.melo@nubank.com.br","acao":"Falso negativo (fechar como OK um fraudador)","matriz":"[Calculadora]","pergunta":"Na pergunta \"Cash Out\" respondeu como \"Realiza cash out rápido porém comportamento e valores não fogem do padrão da conta / comportamento de pejotização\"","resposta":"\"Mudança no comportamento de evasão nos últimos 3 dias (evade de forma rápida, valores fora do padrão, horário suspeito)\"","motivo":"Titular teve recebimento de valor testes com rápida evasão, algumas horas depois recebeu valor expressivo que diverge de seu perfil transacional e tentou evadir rapidamente","material":"[CARD] Interpretação de Cenários - (Metodologia do Mapa Mental)"},{"id":"525ccec1-12b4-4456-b64b-fbc028676c41","distrito":"Mule Account","mes":2,"semana":9,"fonte":"Catch & Release","cont":"[Procedente] Divergência na interpretação do qualiter","analista":"gisele.alves@nubank.com.br","acao":"Falso negativo (fechar como OK um fraudador)","matriz":"[Calculadora]","pergunta":"\"Cash in\"","resposta":"\"Mudança no comportamento de recebimento nos últimos 3 dias (valores fora do padrão ou em horário suspeito)\"","motivo":"Cliente mudou o comportamento cash in, recebendo valores de contatos recentes que fogem do padrão transacional dos últimos dias.","material":"[CARD] Interpretação de Cenários - (Metodologia do Mapa Mental)\n[CARD] Calculadora de Decisões - Protocolo de Análise"},{"id":"5aab3a5f-e043-491a-b7c0-680cd8c747fe","distrito":"Mule Account","mes":2,"semana":9,"fonte":"Catch & Release","cont":"[Procedente] Divergência na interpretação do qualiter","analista":"brigity.cabral@nubank.com.br","acao":"[ALTO IMPACTO] - Missclick","matriz":"[Calculadora]","pergunta":"—","resposta":"Entendemos que você agiu prontamente para corrigir o erro assim que o identificou. Contudo, nosso método customer centric prioriza sempre a experiência do cliente. Mesmo com a correção rápida, é necessário assegurar que a decisão tomada seja a mais adequada ao caso.","motivo":"—","material":"[CARD] Tratativas no Shuffle"},{"id":"7cf50bba-4ba4-464a-a0a2-c2216cd354a5","distrito":"Gamers","mes":2,"semana":7,"fonte":"Reputational","cont":"[Procedente] Divergência na interpretação do qualiter","analista":"rosemeire.bertges@nubank.com.br","acao":"[MÉDIO IMPACTO] - Liquidação de produtos","matriz":"—","pergunta":"—","resposta":"—","motivo":"—","material":"[Gamers] Como resgatar saldos fora da Nuconta (Produtos extras, incluindo contas PF/PJ relacionadas)"},{"id":"95bb5bb9-004e-4bcc-9a1a-4ed49f7d72af","distrito":"Mule Account","mes":2,"semana":7,"fonte":"Catch & Release","cont":"[Procedente] Divergência na interpretação do qualiter","analista":"diego.ribeiro@nubank.com.br","acao":"Falso negativo (fechar como OK um fraudador)","matriz":"[Calculadora]","pergunta":"\"Histórico de contestação\"","resposta":"\"2 ou mais reports de contestação anteriores\"","motivo":"Cliente possui 2 reports de contestação no qual a soma dos valores contestados ultrapassam R$300.","material":"[CARD] Calculadora de Decisões - Protocolo de Análise"},{"id":"59a251e5-cf6a-4b80-94cc-52b3b48df88d","distrito":"Mule Account","mes":3,"semana":12,"fonte":"Catch & Release","cont":"[Procedente] Divergência na interpretação do qualiter","analista":"jose.ednardo@nubank.com.br","acao":"Falso negativo (fechar como OK um fraudador)","matriz":"[Calculadora]","pergunta":"Na pergunta \"5 - CONTATOS - TRISTRAM E CHIMERA\" respondeu como \"Beneficiário alertado é cliente OK / não cliente / mesma titularidade\"","resposta":"5 - CONTATOS - TRISTRAM E CHIMERA: Beneficiário possui report de contestação arquivado.","motivo":"O beneficiário alertado possuía uma transação contestada no valor de R$60,0 no dia 11-10-2025","material":null},{"id":"706ab373-c8b0-45cc-838c-4c2abaf7ce3b","distrito":"Mule Account","mes":3,"semana":11,"fonte":"Catch & Release","cont":"[Procedente] Divergência na interpretação do qualiter","analista":"andreza.maciel@nubank.com.br","acao":"Falso negativo (fechar como OK um fraudador)","matriz":"[Calculadora]","pergunta":"\"Colisões\"","resposta":"\"Possui colisão Alto Risco com Mule Account\"","motivo":"A colisão que o cliente possui é de alto risco.","material":"[CARD] Calculadora de Decisões - Protocolo de Análise"},{"id":"9b5b3047-7042-4f1b-8dce-c845d3095178","distrito":"Identity Fraud","mes":4,"semana":18,"fonte":"Reversals","cont":"[Procedente] Divergência na interpretação do qualiter","analista":null,"acao":"Cliente legítimo fechado como fraudador.","matriz":"[ID]","pergunta":"Fotos.","resposta":"No momento da análise, um cadastro que possuía indícios de legitimidade foi erroneamente fechado por fraude de UPLOAD DE FOTO quando deveria ter sido liberado como Cliente Ok.","motivo":"—","material":null}];
+
+const MONTHS = {1:"Janeiro",2:"Fevereiro",3:"Março",4:"Abril",5:"Maio",6:"Junho",7:"Julho",8:"Agosto",9:"Setembro",10:"Outubro",11:"Novembro",12:"Dezembro"};
+const DIST_COLORS = {"Mule Account":"#7B00F5","Gamers":"#a855f7","Identity Fraud":"#c4b5fd","Não identificado":"#e9d5ff"};
+const CONT_SHORT = {"[Procedente] Divergência na interpretação do qualiter":"Divergência no qualiter","[Procedente] Decisão alinhada com IC5 do distrito":"Alinhada com IC5"};
+const ALL_MONTHS = [1,2,3,4]; // Jan-Mar 2026 range (data goes through month 4)
+
+let charts = {};
+
+function esc(s) {
+  if (!s || s === '—') return s||'—';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function applyFilter() {
+  const dist  = document.getElementById('sel-dist').value;
+  const fonte = document.getElementById('sel-fonte').value;
+  const ini   = document.getElementById('dt-ini').value;  // "2026-01-01"
+  const fim   = document.getElementById('dt-fim').value;  // "2026-04-30"
+
+  // Convert date strings to year+month for comparison (data has mes = month number, year is 2026)
+  const iniY = ini ? parseInt(ini.slice(0,4)) : null;
+  const iniM = ini ? parseInt(ini.slice(5,7)) : null;
+  const fimY = fim ? parseInt(fim.slice(0,4)) : null;
+  const fimM = fim ? parseInt(fim.slice(5,7)) : null;
+
+  function inRange(c) {
+    if (!ini && !fim) return true;
+    const cY = 2026, cM = c.mes;
+    const afterIni  = !ini  || (cY > iniY) || (cY === iniY && cM >= iniM);
+    const beforeFim = !fim  || (cY < fimY) || (cY === fimY && cM <= fimM);
+    return afterIni && beforeFim;
+  }
+
+  const filtered = LIVE_CASES.filter(c =>
+    inRange(c) &&
+    (!dist  || c.distrito === dist) &&
+    (!fonte || c.fonte === fonte)
+  );
+
+  // Update header
+  const distLabel = dist || 'Todos os Distritos';
+  const fmtDate = d => d ? new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'numeric'}) : '—';
+  const periodLabel = ini || fim ? `${fmtDate(ini)} – ${fmtDate(fim)}` : 'Jan – Abr 2026';
+  document.getElementById('hdr-period').textContent =
+    `${periodLabel} · ${distLabel}`;
+
+  render(filtered);
+}
+
+function render(cases) {
+  // Destroy old charts
+  Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} });
+  charts = {};
+
+  const total = cases.length;
+
+  // by month
+  const byMonth = {};
+  for (const c of cases) byMonth[c.mes] = (byMonth[c.mes]||0) + 1;
+
+  // by district
+  const byDist = {};
+  for (const c of cases) byDist[c.distrito] = (byDist[c.distrito]||0) + 1;
+
+  // by district × month
+  const byDM = {};
+  for (const c of cases) { const k = c.distrito+'|'+c.mes; byDM[k] = (byDM[k]||0)+1; }
+
+  // Months present in data
+  const months = [...new Set(cases.map(c=>c.mes))].sort((a,b)=>a-b);
+  const allMonths = months.length ? months : ALL_MONTHS;
+
+  // KPI row
+  const kpiHTML = `<div class="kpi-row">
+    <div class="kpi main">
+      <div class="kpi-n">${total}</div>
+      <div class="kpi-l">Casos Procedentes</div>
+      <div class="kpi-s">Jan – Abr 2026</div>
+    </div>
+    ${allMonths.map(m => {
+      const n = byMonth[m]||0;
+      return `<div class="kpi">
+        <div class="kpi-n" style="color:${n?'#7B00F5':'#d1d1d6'}">${n}</div>
+        <div class="kpi-l">${MONTHS[m]} 2026</div>
+        <div class="kpi-s">${n ? n+' caso'+(n>1?'s':'') : 'Sem ocorrências'}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  // Charts
+  const dLabels = Object.keys(byDist);
+  const dData   = dLabels.map(d => byDist[d]);
+  const dColors = dLabels.map(d => DIST_COLORS[d]||'#8b5cf6');
+  const mLabels = allMonths.map(m => MONTHS[m].slice(0,3)+' 26');
+  const mData   = allMonths.map(m => byMonth[m]||0);
+
+  const chartsHTML = `<div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-ttl">Casos por Distrito</div>
+      <div class="chart-wrap"><canvas id="ch-dist"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-ttl">Distribuição Mensal</div>
+      <div class="chart-wrap"><canvas id="ch-mes"></canvas></div>
+    </div>
+  </div>`;
+
+  // Group by district
+  const groups = {};
+  for (const c of cases) { if (!groups[c.distrito]) groups[c.distrito] = []; groups[c.distrito].push(c); }
+
+  const sectionsHTML = Object.entries(groups).map(([dist, dCases]) => {
+    const statsHTML = allMonths.map(m => {
+      const n = byDM[dist+'|'+m]||0;
+      return `<div class="ds"><div class="ds-n ${n?'has':'zero'}">${n}</div><div class="ds-l">${MONTHS[m]}</div></div>`;
+    }).join('');
+
+    const cardsHTML = dCases.map((c,i) => {
+      const cid = `cc-${dist.replace(/\W+/g,'_')}-${i}`;
+      const cont = CONT_SHORT[c.cont]||c.cont||'—';
+      const acaoShort = c.acao.length > 85 ? c.acao.slice(0,85)+'…' : c.acao;
+      return `<div class="case-card" id="${cid}">
+        <div class="case-hdr" onclick="tog('${cid}')">
+          <div class="ch-left">
+            <div class="badges">
+              <span class="badge b-mes">${MONTHS[c.mes]} · Sem ${c.semana}</span>
+              <span class="badge b-src">${esc(c.fonte)}</span>
+              <span class="badge b-cont">${esc(cont)}</span>
+            </div>
+            <div class="case-action">${esc(acaoShort)}</div>
+          </div>
+          <div class="ch-right">
+            <span class="case-id">${c.id.slice(0,8)}…</span>
+            <span class="chev">⌄</span>
+          </div>
+        </div>
+        <div class="case-body">
+          <div class="fgrid">
+            <div class="fg">
+              <div class="fl">Ação</div>
+              <div class="fv accent">${esc(c.acao)}</div>
+            </div>
+            <div class="fg">
+              <div class="fl">Matriz</div>
+              <div class="fv">${esc(c.matriz)}</div>
+            </div>
+          </div>
+          ${c.pergunta && c.pergunta !== '—' ? `<div class="fg">
+            <div class="fl">Pergunta que gerou erro de resposta</div>
+            <div class="fv">${esc(c.pergunta)}</div>
+          </div>` : ''}
+          ${c.resposta && c.resposta !== '—' ? `<div class="fg">
+            <div class="fl">Resposta correta</div>
+            <div class="fv">${esc(c.resposta)}</div>
+          </div>` : ''}
+          ${c.motivo && c.motivo !== '—' ? `<div class="fg">
+            <div class="fl">Motivo</div>
+            <div class="fv">${esc(c.motivo)}</div>
+          </div>` : ''}
+          ${c.material ? `<div class="fg">
+            <div class="fl">Material de apoio</div>
+            <div class="mat-tag">📚 ${esc(c.material)}</div>
+          </div>` : ''}
+          <div class="analista-row">Analista monitorado: ${esc(c.analista||'—')} &nbsp;·&nbsp; ID: <code style="font-size:10px;">${c.id}</code></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="dist-section">
+      <div class="dist-hdr">
+        <div>
+          <h2>${esc(dist)}</h2>
+          <p>Mapeamento de Contestações Procedentes</p>
+        </div>
+        <span>${dCases.length} caso${dCases.length>1?'s':''}</span>
+      </div>
+      <div class="dist-body">
+        <div class="dist-stats">${statsHTML}</div>
+        ${cardsHTML}
+      </div>
+    </div>`;
+  }).join('');
+
+  const noData = total === 0 ? '<div class="empty">Nenhuma contestação procedente encontrada para os filtros selecionados.</div>' : '';
+
+  document.getElementById('content').innerHTML = kpiHTML + chartsHTML + noData + sectionsHTML;
+
+  // Draw charts
+  requestAnimationFrame(() => {
+    const ctxD = document.getElementById('ch-dist')?.getContext('2d');
+    if (ctxD && dLabels.length) {
+      charts.dist = new Chart(ctxD, {
+        type:'doughnut',
+        data:{ labels:dLabels, datasets:[{ data:dData, backgroundColor:dColors, borderWidth:2, borderColor:'#fff' }] },
+        options:{ responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:10 } } } }
+      });
+    }
+    const ctxM = document.getElementById('ch-mes')?.getContext('2d');
+    if (ctxM) {
+      charts.mes = new Chart(ctxM, {
+        type:'bar',
+        data:{ labels:mLabels, datasets:[{ data:mData, backgroundColor:'#a855f7', borderRadius:6, label:'Casos' }] },
+        options:{ responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ display:false } },
+          scales:{ y:{ beginAtZero:true, ticks:{stepSize:1}, grid:{color:'#f0f0f5'} }, x:{ grid:{display:false} } } }
+      });
+    }
+  });
+}
+
+function tog(id) { document.getElementById(id).classList.toggle('open'); }
+
+// ── Refresh from Databricks ─────────────────────────────────────────────────
+const DB_TOOL  = 'mcp__d138aedf-962a-455c-8168-fe805ac7a432__execute_sql_read_only';
+const DB_POLL  = 'mcp__d138aedf-962a-455c-8168-fe805ac7a432__poll_sql_result';
+
+function setStatus(msg, isErr) {
+  const el = document.getElementById('refresh-status');
+  el.textContent = msg;
+  el.style.color = isErr ? '#b91c1c' : '#8e8e93';
+}
+
+function parseDbRows(res) {
+  if (!res) return null;
+
+  // Standard shape: manifest + result.data_array
+  if (res.manifest?.schema?.columns && res.result?.data_array) {
+    const cols = res.manifest.schema.columns.map(c => c.name);
+    return res.result.data_array.map(row => {
+      const obj = {};
+      (row.values || []).forEach((v, i) => {
+        obj[cols[i]] = ('string_value' in v) ? v.string_value : null;
+      });
+      return obj;
+    });
+  }
+
+  // Alternate shape: data_array directly on root
+  if (res.data_array && res.schema?.columns) {
+    const cols = res.schema.columns.map(c => c.name);
+    return res.data_array.map(row => {
+      const obj = {};
+      (row.values || []).forEach((v, i) => {
+        obj[cols[i]] = ('string_value' in v) ? v.string_value : null;
+      });
+      return obj;
+    });
+  }
+
+  // Alternate shape: plain array of objects already
+  if (Array.isArray(res)) return res;
+
+  return null;
+}
+
+function normalizeRes(res) {
+  // callMcpTool may return the result in different shapes depending on context.
+  // Shape 1 (expected): { status:{state}, manifest:{...}, result:{data_array} }
+  // Shape 2 (wrapped):  { content: [ { text: "<json string>" } ] }
+  // Shape 3 (direct):   already the data array or plain object
+  if (!res) return null;
+
+  // Shape 2: MCP tool result wrapped in content array
+  if (Array.isArray(res.content)) {
+    for (const item of res.content) {
+      if (item?.text) {
+        try { return JSON.parse(item.text); } catch {}
+        // Sometimes it's already the stringified full response
+      }
+      if (item?.json) return item.json;
+    }
+  }
+
+  // Shape 1: direct structured response
+  if (res.status || res.manifest || res.statement_id) return res;
+
+  // Shape 3: maybe it IS the result object directly
+  return res;
+}
+
+async function pollUntilDone(res) {
+  if (!res) throw new Error('Sem resposta do Databricks');
+
+  const norm = normalizeRes(res);
+  if (!norm) throw new Error('Resposta vazia. Raw: ' + JSON.stringify(res).slice(0, 300));
+
+  if (norm.status?.state === 'SUCCEEDED') return norm;
+  if (norm.status?.state === 'FAILED') throw new Error('Query falhou: ' + JSON.stringify(norm).slice(0, 200));
+
+  const sid = norm.statement_id;
+  if (!sid) {
+    // Last resort: maybe the norm itself already has data_array
+    if (norm.result?.data_array || norm.data_array) return norm;
+    throw new Error('Formato inesperado. Estrutura recebida: ' + JSON.stringify(norm).slice(0, 300));
+  }
+
+  for (let i = 0; i < 25; i++) {
+    await new Promise(r => setTimeout(r, 2500));
+    const polled = normalizeRes(await window.cowork.callMcpTool(DB_POLL, { statement_id: sid }));
+    if (polled?.status?.state === 'SUCCEEDED') return polled;
+    if (polled?.status?.state === 'FAILED') throw new Error('Query falhou no polling');
+  }
+  throw new Error('Timeout aguardando Databricks');
+}
+
+function parseFb(text) {
+  if (!text) return {};
+  const m = re => { const x = text.match(re); return x ? x[1].trim() : null; };
+  return {
+    acao:     m(/•{2,5}\s*Ação[:\s]*\n?([\s\S]*?)(?=\n•{2,5}|\n[-_=]{5,}|$)/i)
+           || m(/•{2,5}\s*Ação realizada[:\s]*\n?([\s\S]*?)(?=\n•{2,5}|\n[-_=]{5,}|$)/i),
+    matriz:   m(/•{2,5}\s*(?:Matriz|Fluxograma)[:\s]*\n?([\s\S]*?)(?=\n•{2,5}|\n[-_=]{5,}|$)/i),
+    pergunta: m(/•{2,5}\s*Pergunta que gerou erro[^\n]*:\s*\n?([\s\S]*?)(?=\n•{2,5}|\n[-_=]{5,}|$)/i),
+    resposta: m(/•{2,5}\s*Resposta correta[:\s]*\n?([\s\S]*?)(?=\n•{2,5}|\n[-_=]{5,}|$)/i)
+           || m(/•{2,5}\s*Processo esperado[:\s]*\n?([\s\S]*?)(?=\n•{2,5}|\n[-_=]{5,}|$)/i),
+    motivo:   m(/•{2,5}\s*Motivo[:\s]*\n?([\s\S]*?)(?=\n•{2,5}|\n[-_=]{5,}|$)/i),
+    material: m(/•{2,5}\s*Material de apoio[:\s]*\n?([\s\S]*?)(?=\n•{2,5}|\nAgradecemos|$)/i),
+  };
+}
+
+async function refreshFromDatabricks() {
+  if (!window.cowork?.callMcpTool) {
+    setStatus('⚠️ Conector Databricks não disponível', true);
+    return;
+  }
+  const btn = document.getElementById('btn-refresh');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin">↻</span> Buscando…';
+  setStatus('Consultando Databricks…');
+
+  const ini = document.getElementById('dt-ini').value;
+  const fim = document.getElementById('dt-fim').value;
+
+  try {
+    // Filtrar por monitoring_month (mês de referência da monitoria),
+    // pois evaluation_created_at pode cair em mês diferente do monitoring_month.
+    const iniMonth = parseInt(ini.slice(5,7));
+    const fimMonth = parseInt(fim.slice(5,7));
+    const iniYear  = parseInt(ini.slice(0,4));
+    const fimYear  = parseInt(fim.slice(0,4));
+
+    // Usamos evaluation_created_at apenas para delimitar o ano,
+    // e monitoring_month para delimitar o período correto.
+    const yearFilter = iniYear === fimYear
+      ? `YEAR(evaluation_created_at) = ${iniYear}`
+      : `YEAR(evaluation_created_at) BETWEEN ${iniYear} AND ${fimYear}`;
+
+    const sql = `
+SELECT
+  monitoring_id,
+  COALESCE(
+    monitoring_district,
+    CASE
+      WHEN scorecard_name LIKE '%Mule Account%'  THEN 'Mule Account'
+      WHEN scorecard_name LIKE '%Gamers%'         THEN 'Gamers'
+      WHEN scorecard_name LIKE '%Identity Fraud%' THEN 'Identity Fraud'
+      ELSE 'Não identificado'
+    END
+  ) AS distrito,
+  CAST(monitoring_month AS INT) AS mes,
+  CAST(monitoring_week  AS INT) AS semana,
+  monitoring_source AS fonte,
+  fail_reason,
+  monitored_analyst AS analista,
+  LEFT(analyst_feedback, 2500) AS fb
+FROM etl.br__series_contract.fraud_invops_quality
+WHERE ${yearFilter}
+  AND CAST(monitoring_month AS INT) >= ${iniMonth}
+  AND CAST(monitoring_month AS INT) <= ${fimMonth}
+  AND monitoring_status = 'concluído'
+  AND contestation = '[Procedente] Divergência na interpretação do qualiter'
+QUALIFY ROW_NUMBER() OVER (PARTITION BY monitoring_id ORDER BY extraction_row) = 1
+ORDER BY mes, distrito`;
+
+    const raw  = await window.cowork.callMcpTool(DB_TOOL, { query: sql });
+    const done = await pollUntilDone(raw);
+    const rows = parseDbRows(done);
+
+    if (!rows) throw new Error('Resposta inesperada: ' + JSON.stringify(done).slice(0, 200));
+
+    LIVE_CASES = rows.map(r => {
+      const fb = parseFb(r.fb);
+      return {
+        id:       r.monitoring_id,
+        distrito: r.distrito || 'Não identificado',
+        mes:      parseInt(r.mes),
+        semana:   parseInt(r.semana),
+        fonte:    r.fonte,
+        cont:     '[Procedente] Divergência na interpretação do qualiter',
+        analista: r.analista !== 'NA' ? r.analista : null,
+        acao:     fb.acao    || r.fail_reason || '—',
+        matriz:   fb.matriz  || '—',
+        pergunta: fb.pergunta || '—',
+        resposta: fb.resposta || '—',
+        motivo:   fb.motivo  || '—',
+        material: fb.material || null,
+      };
+    });
+
+    const now = new Date().toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    setStatus(`✓ ${LIVE_CASES.length} caso(s) · ${now}`);
+    applyFilter();
+
+  } catch (err) {
+    setStatus('⚠️ ' + err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '↻ Atualizar dados';
+  }
+}
+
+// Init
+render(LIVE_CASES);
+</script>
+</body>
+</html>
